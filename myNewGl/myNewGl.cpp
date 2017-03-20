@@ -143,8 +143,34 @@ SkyBox createSkyBox() {
 		"skybox/Skybox_PositiveZ.jpg",
 		"skybox/Skybox_NegativeZ.jpg",
 	};
+	const std::array<std::string, 6> faces3 = {
+		"skybox/graycloud_ft.jpg",
+		"skybox/graycloud_bk.jpg",
 
-	return SkyBox(faces);
+		"skybox/graycloud_up.jpg",
+		"skybox/graycloud_dn.jpg",
+
+
+		"skybox/graycloud_rt.jpg",
+		"skybox/graycloud_lf.jpg",
+
+
+	};
+
+	
+
+
+	const std::array<std::string, 6> faces4 = {
+		"skybox/6.png",
+		"skybox/1.png",
+		"skybox/5.png",
+		"skybox/4.png",
+		"skybox/3.png",
+		"skybox/2.png",
+	};
+
+
+	return SkyBox(faces3);
 }
 
 
