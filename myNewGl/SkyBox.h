@@ -2,9 +2,9 @@
 
 class ProgramSkyBox {
 public:
-	ProgramSkyBox(GLuint program);
+	ProgramSkyBox(GLuint program, const std::array<std::string, 6>& faces);
 	void draw(glm::mat4 mvp);
-	void record(const std::array<std::string, 6>& faces);
+
 private:
 	GLuint program;
 	GLuint MVPLocation;

@@ -1,14 +1,11 @@
 #include "stdafx.h"
-
 #include "SkyBox.h"
-
 #include <soil\SOIL.h>
 
 
 SkyBox::SkyBox(const std::array<std::string, 6>& faces)
-	:program(Shaders::getInstance().getProgram<ProgramSkyBox>(Shaders::SKYBOX, Shaders::FRAG_SKYBOX))
+	:program(Shaders::getInstance().getProgram(Shaders::SKYBOX, Shaders::FRAG_SKYBOX),faces)
 {
-	program.record(faces);
 }
 
 SkyBox::~SkyBox()
@@ -23,32 +20,8 @@ void SkyBox::draw(const Camera & camera)
 }
 
 
-ProgramSkyBox::ProgramSkyBox(GLuint program):program(program)
+ProgramSkyBox::ProgramSkyBox(GLuint program, const std::array<std::string, 6>& faces):program(program)
 {
-	
-
-}
-
-void ProgramSkyBox::draw(glm::mat4 mvp)
-{
-	glDepthMask(GL_FALSE);
-	glUseProgram(program);
-	glUniformMatrix4fv(MVPLocation, 1, GL_FALSE, glm::value_ptr(mvp));
-
-	glBindVertexArray(vertexArray);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
-
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-	glBindVertexArray(0);
-	glDepthMask(GL_TRUE);
-
-
-}
-
-void ProgramSkyBox::record(const std::array<std::string, 6>& faces)
-{
-
 	GLfloat skyboxVertices[] = {
 		-1.0f,  1.0f, -1.0f,
 		-1.0f, -1.0f, -1.0f,
@@ -100,7 +73,7 @@ void ProgramSkyBox::record(const std::array<std::string, 6>& faces)
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(GLfloat), (GLvoid*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
 
 	glBindVertexArray(0);
 
@@ -129,5 +102,20 @@ void ProgramSkyBox::record(const std::array<std::string, 6>& faces)
 	MVPLocation = glGetUniformLocation(program, "MVP");
 	testureSampler = glGetUniformLocation(program, "cubeSampler");
 
+}
+
+void ProgramSkyBox::draw(glm::mat4 mvp)
+{
+	glDepthMask(GL_FALSE);
+	glUseProgram(program);
+	glUniformMatrix4fv(MVPLocation, 1, GL_FALSE, glm::value_ptr(mvp));
+
+	glBindVertexArray(vertexArray);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+	glDepthMask(GL_TRUE);
 
 }

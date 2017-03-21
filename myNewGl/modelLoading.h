@@ -102,8 +102,8 @@ std::vector<TextureVertex> pack(const std::vector<glm::vec3>& pos, const std::ve
 
 }
 
-
-TextureModel loadModel(const std::string& modelPath, const std::string& texturePath) {
+typedef SingleTransformationWraper<ProgramTexture> Model;
+Model loadModel(const std::string& modelPath, const std::string& texturePath) {
 	std::ifstream file(modelPath,std::ifstream::in);
 	std::string str;
 
@@ -141,15 +141,16 @@ TextureModel loadModel(const std::string& modelPath, const std::string& textureP
 		}
 	}
 
-	auto indecesRAW = mesh
+	const auto indecesRAW = mesh
 		->first_node("polylist")
 		->first_node("p")
 		->value();
-	auto indeces = parseIndeces(indecesRAW, 3);
+	const auto indeces = parseIndeces(indecesRAW, 3);
 
-	auto positions = unpack<glm::vec3>(position,indeces[0]);
-	auto uvs = unpack<glm::vec2>(uv,indeces[2]);
+	const auto positions = unpack<glm::vec3>(position,indeces[0]);
+	const auto uvs = unpack<glm::vec2>(uv,indeces[2]);
 
-	TextureModel m(pack(positions,uvs),texturePath);
-	return m;
+	const ProgramTexture program(Shaders::getInstance().getProgram(Shaders::vertex::UV, Shaders::fragment::TEXTURE),pack(positions,uvs),texturePath);
+
+	return Model(program);
 }

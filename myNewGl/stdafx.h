@@ -35,6 +35,8 @@
 #include <GL\glew.h>
 #include <GLFW\glfw3.h>
 
+
+#include "utils.h"
 #include "Shaders.h"
 #include "Camera.h"
 
