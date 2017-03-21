@@ -147,7 +147,7 @@ public:
 		//pyramid.transform = glm::translate(glm::mat4(1.f), glm::vec3(0, 0, -3));
 		pyramid2.setTranslation(glm::translate(glm::mat4(1.f), glm::vec3(0, -3.5f, -3)));
 	//	spiral.translate = glm::translate(glm::mat4(1.f), glm::vec3(-3, -5, -3));
-		//cone.transform(glm::translate(glm::mat4(1.f), glm::vec3(3, 0, -3))*glm::rotate(glm::mat4(), glm::radians(-90.f), {1,0,0}));
+		cone.setTranslation(glm::translate(glm::mat4(1.f), glm::vec3(3, 0, -3)));
 		spiral.setTranslation(glm::translate(glm::mat4(), {-3,-5,-3}));
 	}
 
