@@ -81,8 +81,8 @@ class CameraControll {
 	GLFWwindow* window;
 	double basePositionX, basePositionY;
 
-	glm::vec3 baseCameraDir;
 	glm::vec3 cameraPos = {0,0,5};
+	glm::vec3 _front;
 
 	glm::vec2 mousePositionDelta() {
 		static double prevx, prevy;
@@ -103,10 +103,13 @@ class CameraControll {
 
 public:
 
+	const glm::vec3& const position()  { return cameraPos; }
+	const glm::vec3& const front()  { return _front; }
+
 
 	CameraControll(GLFWwindow * window) :window(window)
 	{
-
+		
 	}
 
 	float mouseSensetivity = 0.003f;
@@ -118,19 +121,19 @@ public:
 
 		auto mouseDelta = mousePositionDelta()*mouseSensetivity;
 
-		glm::vec3 direction = {
+		_front = {
 			cos(verdicalAngle) * sin(horizontalAngle),
 			sin(verdicalAngle),
 			cos(verdicalAngle) * cos(horizontalAngle),
 		};
-		direction = glm::normalize(direction);
+		_front = glm::normalize(_front);
 
 		glm::vec3 rigth = {
 			sin(horizontalAngle - PI / 2.f),
 			0,
 			cos(horizontalAngle - PI / 2.f)
 		};
-		glm::vec3 up = glm::cross(rigth, direction);
+		glm::vec3 up = glm::cross(rigth, _front);
 		
 
 		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
@@ -139,10 +142,10 @@ public:
 		}
 
 		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-			cameraPos += direction*time*movementSpeed;
+			cameraPos += _front*time*movementSpeed;
 		};
 		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-			cameraPos += -direction*time*movementSpeed;
+			cameraPos += -_front*time*movementSpeed;
 		};
 		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
 			cameraPos += -rigth*time*movementSpeed;
@@ -157,7 +160,7 @@ public:
 			cameraPos += -up*time*movementSpeed;
 		};
 
-		camera._view = glm::lookAt(cameraPos, cameraPos + direction, up);
+		camera._view = glm::lookAt(cameraPos, cameraPos + _front, up);
 
 	}
 

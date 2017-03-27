@@ -14,3 +14,7 @@ GLuint createArrayBuffer(const std::vector<T>& data) {
 	glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(T), data.data(), GL_STATIC_DRAW);
 	return buffer;
 }
+
+glm::vec3 extractTranslation(const glm::mat4& model);
+
+

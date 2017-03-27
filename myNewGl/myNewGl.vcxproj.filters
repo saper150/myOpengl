@@ -48,6 +48,15 @@
     <ClInclude Include="Wraper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Colider.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Stearing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="myRandom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -63,6 +72,21 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Colider.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Stearing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TexturedModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="modelLoading.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="myRandom.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

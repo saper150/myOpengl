@@ -9,7 +9,10 @@
 #include "modelLoading.h"
 #include "SkyBox.h"
 #include "Spiral.h"
-
+#include "Colider.h"
+#include <glm\gtc\quaternion.hpp>
+#include <glm\gtx\euler_angles.hpp>
+#include "Stearing.h"
 SkyBox createSkyBox() {
 	const std::array<std::string, 6> faces = {
 		"skybox/right.jpg",
@@ -77,6 +80,22 @@ struct PointProgram {
 
 		glBindVertexArray(0);
 	}
+	class Instance {
+	public:
+		Instance(GLsizei size,GLuint vertexArray,GLuint MVPlocation,GLuint program):size(size)
+		{
+
+		}
+		GLenum type = GL_POINTS;
+
+	private:
+		GLsizei size;
+		GLuint vertexArray;
+		GLuint MVPplcation;
+		GLuint program;
+
+	};
+
 
 	void draw(const glm::mat4& mvp) {
 		glUseProgram(program);
@@ -138,51 +157,180 @@ Cone createCone() {
 
 }
 
+static class Input {
+public:
+
+	static void init(GLFWwindow *  window) {
+		_window = window;
+		glfwSetMouseButtonCallback(window, mouse_button_callback);
+	}
+
+
+	static std::vector < std::function<void(void)>> mouseDownCallbacks;
+
+private:
+	static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+	{
+		if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
+			for (auto& callback : mouseDownCallbacks) {
+				callback();
+			}
+		}
+			
+	}
+
+
+
+	static GLFWwindow * _window;
+
+
+};
+GLFWwindow* Input::_window;
+std::vector < std::function<void(void)>> Input::mouseDownCallbacks;
+
+
 
 class Scene {
 public:
-	Scene(GLFWwindow * window):camera(window),cameraControll(window)
+	Scene(GLFWwindow * window):camera(window),cameraControll(window),window(window)
 	{
+
 	//	t.transform = glm::translate(glm::mat4(1.f), glm::vec3(1, 1, 1));
 		//pyramid.transform = glm::translate(glm::mat4(1.f), glm::vec3(0, 0, -3));
-		pyramid2.setTranslation(glm::translate(glm::mat4(1.f), glm::vec3(0, -3.5f, -3)));
+		pyramid.setTranslation(glm::translate(glm::mat4(1.f), glm::vec3(0, 0.f, -3)));
 	//	spiral.translate = glm::translate(glm::mat4(1.f), glm::vec3(-3, -5, -3));
 		cone.setTranslation(glm::translate(glm::mat4(1.f), glm::vec3(3, 0, -3)));
 		spiral.setTranslation(glm::translate(glm::mat4(), {-3,-5,-3}));
+		spiral2.setTranslation(glm::translate(glm::mat4(), { -9,-5,-3 }));
+
+		domek.setTranslation(glm::translate(glm::mat4(), { 10,0,-5 }));
+		domek.setRotation(glm::rotate(glm::mat4(), glm::radians(90.f), { 1,0,0 }));
+		neptun.setTranslation(glm::translate(glm::mat4(), { 8,0,-3 }));
+		neptun.setRotation(glm::rotate(glm::mat4(),glm::radians(90.f), { 1,0,0 }));
+		Input::mouseDownCallbacks.push_back(std::bind(&Scene::mouseDown,this));
 	}
 
+	void mouseDown() {
+		if (currentlyMainpulatedObject != nullptr) {
+			currentlyMainpulatedObject = nullptr;
+			return;
+		}
+
+		float distance;
+		if (singlePiramidProto.colider.testRay(cameraControll.position(), cameraControll.front(), pyramid.getModel(), distance)) {
+			currentlyMainpulatedObject = &pyramid;
+			std::cout << distance << std::endl;
+		}
+	
+	}
+	TransformationWraper * currentlyMainpulatedObject = nullptr;
 	void updata(float time) {
 		cameraControll.updataCamera(time, camera);
 		camera.updateAspectRation();
 
 		skyBox.draw(camera);
 
+
 		spiral.draw(camera);
 		spiral.update(time);
 		cone.draw(camera);
+		neptun.draw(camera);
+		spiral2.draw(camera);
+		spiral2.update(time);
+
+		
+
+		if (currentlyMainpulatedObject!= nullptr) {
+			auto& pos = cameraControll.position();
+			auto& front = cameraControll.front();
+			currentlyMainpulatedObject->setTranslation(glm::translate(glm::mat4(),(5.f*front)+pos));
+			
+			const float rotationVel = 1.8f*time;
+#ifdef EULER
+
+			{
+				static auto rotation = glm::vec3(0, 0, 0);
+				if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+					rotation.x += rotationVel;
+				}
+				if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+					rotation.x -= rotationVel;
+
+				}
+				if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+					rotation.y += rotationVel;
+
+				}
+				if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+					rotation.y -= rotationVel;
+				}
+				currentlyMainpulatedObject->setRotation(glm::eulerAngleXYZ(rotation.x, rotation.y, 0.f));
+
+			}
+#else
+			{
+				auto& rotation = glm::quat_cast(currentlyMainpulatedObject->getRotation());
+				if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+					rotation *= glm::quat(cos(rotationVel / 2.f), sin(rotationVel / 2.f), 0, 0);
+				}
+				if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+					rotation *= glm::quat(cos(-rotationVel / 2.f), sin(-rotationVel / 2.f), 0, 0);
+				}
+				if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+					rotation *= glm::quat(cos(-rotationVel / 2.f), 0, sin(-rotationVel / 2.f), 0);
+				}
+				if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+					rotation *= glm::quat(cos(rotationVel / 2.f), 0, sin(rotationVel / 2.f), 0);
+				}
+				rotation = glm::normalize(rotation);
+
+				currentlyMainpulatedObject->setRotation(glm::mat4_cast(rotation));
+			}
+#endif
+
+		}
 
 
 		pyramid.draw(camera);
-		pyramid2.draw(camera);
-
-		auto pos = camera.getCameraPos();
 
 
+		domek.draw(camera);
+
+	//	pyramid2.draw(camera);
+
+		sprite.draw(camera);
+
+		stearing.update(time);
+		stearing.draw(camera);
 
 
 	}
 private:
-	Sprite sprite = createSprite("awesomeface.png");
+	TextureModelPrototype awesomeFaceProto= createSpritePrototype("awesomeface.png");
+	Sprite sprite = awesomeFaceProto.createInstance();
 
-	Model pyramid = loadModel("pyramid.dae", "pyramid.png");
-	Model pyramid2{ loadModel("pir.dae","pir.png") };
-	Spiral spiral = createSpiral();
+	TextureModelPrototype singlePiramidProto = loadModel("pyramid.dae", "pyramid.png");
+	TextureModelPrototype domekProto = loadModel("domek.dae", "domek.jpg");
+	Model domek = domekProto.createInstance();
+
+	Model pyramid = singlePiramidProto.createInstance();
+	Stearing stearing{ &pyramid.getModel() };
+	//Model pyramid = loadModel("pyramid.dae", "pyramid.png");
+	//Model pyramid2 = loadModel("pir.dae","pir.png");
+	TextureModelPrototype neptunProto = loadModel("neptun.dae", "neptun.jpg");
+	Model neptun = neptunProto.createInstance();
+
+	SpiralPrototype spiralProto = createSpiral();
+	SpiralWarper spiral{ spiralProto.createInstance(),spiralProto.getTotalSize() };
+
+	SpiralWarper spiral2 = spiral;
+
 	SkyBox skyBox = createSkyBox();
 	Cone cone = createCone();
 
 	Camera camera;
 	CameraControll cameraControll;
-	
+	GLFWwindow * window;
 };
 
 
@@ -243,15 +391,15 @@ int main()
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
-
 	glEnable(GL_BLEND);
+	
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
-
+	Input::init(window);
 	Renderer r(window);
 	r.loop();
 

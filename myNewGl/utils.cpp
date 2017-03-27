@@ -33,3 +33,12 @@ GLuint createVertexArray()
 GLuint loadTexture(const std::string& path) {
 	return loadTexture(path,GL_LINEAR,GL_LINEAR_MIPMAP_LINEAR);
 }
+
+glm::vec3 extractTranslation(const glm::mat4& model) {
+	glm::vec3 translation;
+	translation.x = model[0][3];
+	translation.y = model[1][3];
+	translation.x = model[2][3];
+	return translation;
+
+}
