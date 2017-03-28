@@ -195,15 +195,16 @@ public:
 	Scene(GLFWwindow * window):camera(window),cameraControll(window),window(window)
 	{
 
-	//	t.transform = glm::translate(glm::mat4(1.f), glm::vec3(1, 1, 1));
-		//pyramid.transform = glm::translate(glm::mat4(1.f), glm::vec3(0, 0, -3));
+
 		pyramid.setTranslation(glm::translate(glm::mat4(1.f), glm::vec3(0, 0.f, -3)));
+		pyramid2.setTranslation(glm::translate(glm::mat4(1.f), glm::vec3(0, -3.f, -3)));
+
 	//	spiral.translate = glm::translate(glm::mat4(1.f), glm::vec3(-3, -5, -3));
 		cone.setTranslation(glm::translate(glm::mat4(1.f), glm::vec3(3, 0, -3)));
 		spiral.setTranslation(glm::translate(glm::mat4(), {-3,-5,-3}));
 		spiral2.setTranslation(glm::translate(glm::mat4(), { -9,-5,-3 }));
 
-		domek.setTranslation(glm::translate(glm::mat4(), { 10,0,-5 }));
+		domek.setTranslation(glm::translate(glm::mat4(), { 12,0,-1 }));
 		domek.setRotation(glm::rotate(glm::mat4(), glm::radians(90.f), { 1,0,0 }));
 		neptun.setTranslation(glm::translate(glm::mat4(), { 8,0,-3 }));
 		neptun.setRotation(glm::rotate(glm::mat4(),glm::radians(90.f), { 1,0,0 }));
@@ -223,7 +224,10 @@ public:
 		}
 	
 	}
+
 	TransformationWraper * currentlyMainpulatedObject = nullptr;
+
+
 	void updata(float time) {
 		cameraControll.updataCamera(time, camera);
 		camera.updateAspectRation();
@@ -231,14 +235,24 @@ public:
 		skyBox.draw(camera);
 
 
-		spiral.draw(camera);
-		spiral.update(time);
 		cone.draw(camera);
 		neptun.draw(camera);
+
+		spiral.draw(camera);
+		spiral.update(time);
+
 		spiral2.draw(camera);
 		spiral2.update(time);
 
-		
+		pyramid.draw(camera);
+		pyramid2.draw(camera);
+
+
+		domek.draw(camera);
+
+		stearing.update(time);
+		stearing.draw(camera);
+
 
 		if (currentlyMainpulatedObject!= nullptr) {
 			auto& pos = cameraControll.position();
@@ -291,17 +305,12 @@ public:
 		}
 
 
-		pyramid.draw(camera);
 
 
-		domek.draw(camera);
 
 	//	pyramid2.draw(camera);
 
-		sprite.draw(camera);
 
-		stearing.update(time);
-		stearing.draw(camera);
 
 
 	}
@@ -316,7 +325,8 @@ private:
 	Model pyramid = singlePiramidProto.createInstance();
 	Stearing stearing{ &pyramid.getModel() };
 	//Model pyramid = loadModel("pyramid.dae", "pyramid.png");
-	//Model pyramid2 = loadModel("pir.dae","pir.png");
+	TextureModelPrototype pyramid2Proto = loadModel("pir.dae","pir.png");
+	Model pyramid2 = pyramid2Proto.createInstance();
 	TextureModelPrototype neptunProto = loadModel("neptun.dae", "neptun.jpg");
 	Model neptun = neptunProto.createInstance();
 
