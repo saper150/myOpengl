@@ -1,7 +1,17 @@
 #include "stdafx.h"
 #include "modelLoading.h"
 
-TextureModelPrototype loadModel(const std::string& modelPath, const std::string& texturePath) {
+struct ModelData {
+	const std::vector<glm::vec3> pos;
+	const std::vector<glm::vec3> normals;
+	const std::vector<glm::vec2> uvs;
+};
+
+
+
+ModelData getModelData(std::string modelPath) {
+
+
 	std::ifstream file(modelPath, std::ifstream::in);
 	std::string str;
 
@@ -21,6 +31,8 @@ TextureModelPrototype loadModel(const std::string& modelPath, const std::string&
 
 	std::vector<glm::vec3> position;
 	std::vector<glm::vec2> uv;
+	std::vector<glm::vec3> normal;
+
 
 	std::vector<int> positionIndexes;
 
@@ -35,10 +47,13 @@ TextureModelPrototype loadModel(const std::string& modelPath, const std::string&
 				xml_node<>* arr = node->first_node("float_array");
 				uv = parseArray<glm::vec2, 2>(arr->value());
 			}
+			if (std::string(node->first_attribute("id")->value()).find("mesh-normals") != std::string::npos) {
+				xml_node<>* arr = node->first_node("float_array");
+				normal = parseArray<glm::vec3, 3>(arr->value());
+			}
 
 		}
 	}
-
 	const auto indecesRAW = mesh
 		->first_node("polylist")
 		->first_node("p")
@@ -46,10 +61,21 @@ TextureModelPrototype loadModel(const std::string& modelPath, const std::string&
 	const auto indeces = parseIndeces(indecesRAW, 3);
 
 	const auto positions = unpack<glm::vec3>(position, indeces[0]);
+	const auto normals = unpack<glm::vec3>(normal, indeces[1]);
 	const auto uvs = unpack<glm::vec2>(uv, indeces[2]);
 
-	return TextureModelPrototype(Shaders::getInstance().getProgram(Shaders::vertex::UV, Shaders::fragment::TEXTURE), pack(positions, uvs), texturePath);
 
+	return{ positions,normals,uvs };
+
+}
+
+std::vector<LigthVertex> pack(const std::vector<glm::vec3>& pos, const std::vector<glm::vec3>& normals, const std::vector<glm::vec2>& uv) {
+	std::vector<LigthVertex> res(pos.size());
+	for (size_t i = 0; i < pos.size(); i++)
+	{
+		res.push_back({ pos[i],normals[i],uv[i] });
+	}
+	return res;
 }
 
 std::vector<TextureVertex> pack(const std::vector<glm::vec3>& pos, const std::vector<glm::vec2>& uv) {
@@ -59,8 +85,27 @@ std::vector<TextureVertex> pack(const std::vector<glm::vec3>& pos, const std::ve
 		res.push_back({ pos[i],uv[i] });
 	}
 	return res;
+}
+
+TextureModelPrototype loadModel(const std::string& modelPath, const std::string& texturePath) {
+
+	const auto modelData = getModelData(modelPath);
+	return TextureModelPrototype(Shaders::getInstance().getProgram(Shaders::vertex::UV, Shaders::fragment::TEXTURE), pack(modelData.pos, modelData.uvs), texturePath);
+}
+
+LigthModelPrototype loadModelLigth(const std::string& modelPath, const std::string& texturePath) {
+	const auto modelData = getModelData(modelPath);
+	return LigthModelPrototype(pack(modelData.pos, modelData.normals, modelData.uvs),texturePath);
 
 }
+
+
+
+
+
+
+
+
 std::vector<std::vector<int>> parseIndeces(const char * toParse, int count) {
 	std::vector<std::vector<int>> result(count);
 	result.resize(count);

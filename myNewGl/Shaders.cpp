@@ -1,9 +1,6 @@
 #include "stdafx.h"
 #include "Shaders.h"
 
-Shaders Shaders::instance;
-
-
 Shaders::Shaders() {
 
 	fragShaders[IN_OUT_COLOR] =
@@ -100,6 +97,7 @@ Shaders::Shaders() {
 		"gl_Position = MVP*vec4(pointPosition,1.0);"
 		"}";
 
+
 	vertexShaders[SKYBOX] =
 		"#version 330 core\n"
 		"layout(location = 0) in vec3 position;"
@@ -110,6 +108,55 @@ Shaders::Shaders() {
 		"gl_Position = MVP*vec4(position,1.0);"
 		"}";
 
+	{
+		const  char * vertexCode =
+			"#version 330 core\n"
+			"layout(location = 0) in vec3 pointPosition;"
+			"layout(location = 1) in vec3 normal;"
+			"layout(location = 2) in vec2 vertexUV;"
+			"uniform mat4 model;"
+			"uniform mat4 view;"
+			"uniform mat4 projection;"
+			"out vec2 UV;"
+			"out vec3 normalFrag;"
+			"out vec3 fragPos;"
+			"void main(){"
+			"UV = vertexUV;"
+			"normalFrag = normal;"
+			"fragPos = vec3(model*vec4(pointPosition,1.0));"
+			"gl_Position = projection*view*model*vec4(pointPosition,1.0);"
+			"}";
+
+		const char* fragCode =
+			"#version 330 core\n"
+			"out vec4 color;"
+			"in vec2 UV;"
+			"in vec3 normalFrag;"
+			"in vec3 fragPos;"
+			"uniform sampler2D textureSampler;"
+			"uniform float ambientLightStrength;"
+			"uniform vec3 ambientLightColor;"
+			"void main(){"
+			"vec3 lightDir = normalize(vec3(0,0,0)-fragPos);"
+			"vec3 diff = max(dot(normalFrag,lightDir),0.0)*vec3(1.0,1.0,1.0);"
+			"vec3 ambient = (ambientLightStrength*ambientLightColor);"
+			"color =  vec4(ambient+diff,1.0) * texture(textureSampler,vec2(UV.x,1.0-UV.y));"
+				"}";
+
+			const auto vertex = compileShader(vertexCode, GL_VERTEX_SHADER);
+			const auto frag = compileShader(fragCode, GL_FRAGMENT_SHADER);
+			auto program = compileProgram(vertex,frag);
+
+			std::unordered_map<std::string, GLuint> uniformLocations;
+			uniformLocations["textureSampler"] = glGetUniformLocation(program, "textureSampler");
+			uniformLocations["ambientLightStrength"] = glGetUniformLocation(program, "ambientLightStrength");
+			uniformLocations["ambientLightColor"] = glGetUniformLocation(program, "ambientLightColor");
+			uniformLocations["model"] = glGetUniformLocation(program, "model");
+			uniformLocations["view"] = glGetUniformLocation(program, "view");
+			uniformLocations["projection"] = glGetUniformLocation(program, "projection");
+
+			programs[LIGTH_PROGRAM] = std::make_unique<ProgramDescription>(ProgramDescription(program, uniformLocations));
+	}
 }
 
 GLuint Shaders::compileShader(const std::string& code, GLenum type) {
@@ -174,4 +221,13 @@ GLuint Shaders::getProgram(int vetrexCode, int fragmentCode) {
 
 	return programId;
 
+}
+
+ProgramDescription * Shaders::getProgram(PROGRAMS programId)
+{
+	auto f = programs.find(programId);
+	if (f == programs.end()) {
+		throw std::runtime_error("program not found");
+	}
+	return (*f).second.get();
 }

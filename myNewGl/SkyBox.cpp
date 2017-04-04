@@ -12,9 +12,9 @@ SkyBox::~SkyBox()
 {
 }
 
-void SkyBox::draw(const Camera & camera)
+void SkyBox::draw(const ComponentHandle<Camera> & camera)
 {
-	auto mvp = camera.projection()*glm::mat4(glm::mat3(camera.view()));
+	auto mvp = camera->projection*glm::mat4(glm::mat3(camera->view));
 	program.draw(mvp);
 
 }

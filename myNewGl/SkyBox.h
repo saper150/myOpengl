@@ -21,7 +21,7 @@ class SkyBox
 public:
 	SkyBox(const std::array<std::string,6>& faces);
 	~SkyBox();
-	void draw(const Camera& camera);
+	void draw(const ComponentHandle<Camera>& camera);
 
 private:
 	ProgramSkyBox program;

@@ -8,7 +8,8 @@ struct Point3d {
 };
 
 struct SpiralPrototype {
-	SpiralPrototype(GLuint program, const std::vector<Point3d>& points,float totalSize) :program(program),totalSize(totalSize)
+	SpiralPrototype(GLuint program, const std::vector<Point3d>& points,float totalSize,aabbColider colider) 
+		:program(program),totalSize(totalSize),colider(colider)
 	{
 		MVPplcation = glGetUniformLocation(program, "MVP");
 		totalSizeLocation = glGetUniformLocation(program, "totalSize");
@@ -45,7 +46,6 @@ struct SpiralPrototype {
 			}
 
 	private:
-		
 		GLuint vertexArray;
 		GLuint MVPplcation;
 		GLuint totalSizeLocation;
@@ -54,6 +54,7 @@ struct SpiralPrototype {
 		GLint size;
 
 	};
+	aabbColider colider;
 
 	SpiralInstance createInstance() {
 		return SpiralInstance(program, MVPplcation, totalSizeLocation, spiralPositionLocation, size, vertexArray);
@@ -70,39 +71,25 @@ struct SpiralPrototype {
 	GLuint program;
 };
 
-class SpiralWarper :public SingleTransformationWraper<SpiralPrototype::SpiralInstance>
-{
-public:
-	SpiralWarper(const SpiralPrototype::SpiralInstance& instance, float totalSize) :SingleTransformationWraper(instance), totalSize(totalSize)
-	{
 
-	}
-	void update(float time) {
-		spiralPosition += time*spiralVel;
-		if (spiralPosition > 1.f) {
-			spiralPosition = spiralPosition - 1.f;
-		}
-	}
-	void draw(const Camera& camera) override {
-		auto mvp = camera.projection()*camera.view()*_model;
-		program.draw(mvp, totalSize, spiralPosition);
-
-	}
-
-private:
-	float spiralVel = 0.02;
-	float spiralPosition = 0;
-	float totalSize;
-
+struct SpiralPosition {
+	float spiralVel = 0.02f;
+	float spiralposition = 0;
+	float spiralSize;
 };
+
 
 SpiralPrototype createSpiral() {
 	std::vector<Point3d> points = {};
-	float y = 0;
+
+	const float increasBy = 0.1f;
+	float y = PI*11*-increasBy;
+	const glm::vec3 aabbMin = {-1,y,-1};
+	const glm::vec3 aabbMax = { 1,PI * 11 * increasBy,1 };
 	for (float i = 0; i < PI * 2 * 11; i += 0.1f) {
 
 		points.push_back({ { sin(i),y,cos(i) },{ 0.0,1.0,0.0 } });
 		y += 0.01f;
 	}
-	return SpiralPrototype (Shaders::getInstance().getProgram(Shaders::vertex::SPIRAL, Shaders::fragment::IN_OUT_COLOR), points,y);
+	return SpiralPrototype (Shaders::getInstance().getProgram(Shaders::vertex::SPIRAL, Shaders::fragment::IN_OUT_COLOR), points,y,aabbColider(aabbMin,aabbMax));
 }

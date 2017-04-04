@@ -40,25 +40,25 @@ template<typename T>
 class SingleTransformationWraper :public TransformationWraper 
 {
 public:
-	SingleTransformationWraper(const T& program):program(program){
+	SingleTransformationWraper(const T& program):instance(program){
 			
 	}
 	virtual void draw(const Camera& camera) {
-		auto mvp = camera.projection()*camera.view()*_model;
-		program.draw(mvp);
+		auto mvp = camera.projection*camera.view*_model;
+		instance.draw(mvp);
 	}
 protected:
-	T program;
+	T instance;
 };
 
 template<typename T>
-class Bilboard:public SingleTransformationWraper<T> 
+class Bilboard: public SingleTransformationWraper<T> 
 {
 public:
 	Bilboard(const T& program):SingleTransformationWraper(program){}
 
 	void draw(const Camera& camera) override {
-		auto& view = camera.view();
+		auto& view = camera.view;
 		_model[0][0] = view[0][0];
 		_model[0][1] = view[1][0];
 		_model[0][2] = view[2][0];
@@ -71,16 +71,32 @@ public:
 		_model[2][2] = view[2][2];
 
 
-		auto mvp = camera.projection()*view*_model;
+		auto mvp = camera.projection*view*_model;
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
 		glDepthMask(GL_FALSE);
-		program.draw(mvp);
+		instance.draw(mvp);
 		glDepthMask(GL_TRUE);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	}
 };
+
+
+template<typename T>
+class LigthWraper : public TransformationWraper
+{
+public:
+	LigthWraper(const T& instance) :instance(instance) {}
+	 void draw(const Camera& camera)  {
+		instance.draw(camera.projection(),camera.view(),_model);
+	}
+	T instance;
+
+};
+
+
+
 
 template<typename T>
 class MultipleTransformationWraper :public TransformationWraper
@@ -91,7 +107,7 @@ public:
 
 	}
 	virtual void draw(const Camera& camera) {
-		auto mvp = camera.projection()*camera.view()*_model;
+		auto mvp = camera.projection*camera.view*_model;
 		for (auto& program : programs) {
 			program.draw(mvp);
 		}
@@ -99,3 +115,24 @@ public:
 protected:
 	std::vector<T> programs;
 };
+
+
+struct Transformation {
+	glm::vec3 position;
+	//glm::vec3 rotation;
+	glm::quat rotation{};
+	float scale = 1.0f;
+
+	glm::mat4 createModel() {
+		const auto translation = glm::translate(position);
+
+		const auto roteted = translation * glm::mat4_cast(rotation);
+		return  glm::scale(roteted, { scale,scale,scale });
+
+
+	}
+
+};
+
+
+

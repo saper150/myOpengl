@@ -68,3 +68,4 @@ std::vector<std::vector<int>> parseIndeces(const char * toParse, int count);
 std::vector<TextureVertex> pack(const std::vector<glm::vec3>& pos, const std::vector<glm::vec2>& uv);
 
 TextureModelPrototype loadModel(const std::string& modelPath, const std::string& texturePath);
+LigthModelPrototype loadModelLigth(const std::string& modelPath, const std::string& texturePath);

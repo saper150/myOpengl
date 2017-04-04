@@ -2,168 +2,57 @@
 
 #include "stdafx.h"
 
-
 #define PI 3.1415926f
 
+class Transformation;
+class aabbColider;
+struct Position {
+	glm::vec3 pos = { 0,0,0 };
+};
+struct CameraDirection {
+	float xAngle = 0;
+	float yAngle = 0;
+};
+
+using namespace entityx;
+
 struct Camera {
-	Camera(GLFWwindow * window) :window(window)
-	{
-		updateAspectRation();
-		updataProjection();
-		updateView();
-
-	}
-
-	const glm::mat4& projection() const { return _projection; }
-	const glm::mat4& view() const { return _view; }
-
-
-	void setCameraPos(glm::vec3 cameraPos) {
-		_cameraPos = cameraPos;
-		updateView();
-	}
-	const glm::vec3& getCameraPos() const {
-		return _cameraPos;
-	}
-	const glm::vec3& getCameraLookAt() const { return _cameraLookAt; }
-
-	void setCameraLookAt(glm::vec3 cameraDir) {
-		_cameraLookAt = cameraDir;
-		updateView();
-	}
-
-	const glm::vec3 getCameraUp() const { return _cameraUp; }
-
-	void setCameraUp(glm::vec3 cameraUp) {
-		_cameraUp = cameraUp;
-		updateView();
-	}
-
-	glm::vec3 cameraDirection() {
-		return glm::normalize(_cameraLookAt - _cameraPos);
-	}
-
-	float getFow() const { return fow; }
-	void setFow(float fow) {
-		this->fow = fow;
-		updataProjection();
-	}
-
-	void updateAspectRation() {
-		int width, height;
-		glfwGetWindowSize(window, &width, &height);
-		glViewport(0, 0, width, height);
-		this->aspectRatio = width / (float)height;
-		updataProjection();
-	}
-
-	glm::mat4 _view;
-private:
-	void updataProjection() {
-		_projection = glm::perspective(glm::radians(fow), aspectRatio, 0.01f, 100.f);
-
-	}
-	void updateView() {
-		_view = glm::lookAt(_cameraPos, _cameraLookAt, _cameraUp);
-	}
-
-	float aspectRatio;
-	float fow = 45.f;
-	GLFWwindow * window;
-	glm::mat4 _projection;
-	glm::vec3 _cameraPos{ 0,0,5 };
-	glm::vec3 _cameraLookAt{ 0,0,0 };
-	glm::vec3 _cameraUp{ 0,1,0 };
-
+	glm::mat4 projection = glm::perspective(glm::radians(60.f), 4.f/3.f, 0.01f, 200.f);;
+	glm::mat4 view;
 };
 
-class CameraControll {
-	GLFWwindow* window;
-	double basePositionX, basePositionY;
+struct CameraSystem : public System<CameraSystem> , public Receiver<CameraSystem> {
 
-	glm::vec3 cameraPos = {0,0,5};
-	glm::vec3 _front;
-
-	glm::vec2 mousePositionDelta() {
-		static double prevx, prevy;
-		static double posx, posy;
-
-		prevx = posx;
-		prevy = posy;
-
-		glfwGetCursorPos(window, &posx, &posy);
-
-		double deltax = prevx - posx;
-		double deltay = prevy - posy;
-
-
-		return{ deltax,deltay };
+	void configure(entityx::EventManager &event_manager) {
+		event_manager.subscribe <MouseDownEvent>(*this);
+		event_manager.subscribe <MouseScrolEvent>(*this);
 
 	}
-
-public:
-
-	const glm::vec3& const position()  { return cameraPos; }
-	const glm::vec3& const front()  { return _front; }
-
-
-	CameraControll(GLFWwindow * window) :window(window)
-	{
-		
-	}
-
-	float mouseSensetivity = 0.003f;
-	float movementSpeed = 10;
-	void updataCamera(float time, Camera& camera) {
-		static float horizontalAngle = 3.14f;
-		static float verdicalAngle = 0.f;
-
-
-		auto mouseDelta = mousePositionDelta()*mouseSensetivity;
-
-		_front = {
-			cos(verdicalAngle) * sin(horizontalAngle),
-			sin(verdicalAngle),
-			cos(verdicalAngle) * cos(horizontalAngle),
-		};
-		_front = glm::normalize(_front);
-
-		glm::vec3 rigth = {
-			sin(horizontalAngle - PI / 2.f),
-			0,
-			cos(horizontalAngle - PI / 2.f)
-		};
-		glm::vec3 up = glm::cross(rigth, _front);
-		
-
-		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-			verdicalAngle += mouseDelta.y;
-			horizontalAngle += mouseDelta.x;
+	
+	void receive(const MouseDownEvent &mouseDown) {
+		if (mouseDown.code == GLFW_MOUSE_BUTTON_RIGHT) {
+			wasMousePresed = true;
 		}
-
-		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-			cameraPos += _front*time*movementSpeed;
-		};
-		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-			cameraPos += -_front*time*movementSpeed;
-		};
-		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-			cameraPos += -rigth*time*movementSpeed;
-		};
-		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-			cameraPos += rigth*time*movementSpeed;
-		};
-		if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-			cameraPos += up*time*movementSpeed;
-		};
-		if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-			cameraPos += -up*time*movementSpeed;
-		};
-
-		camera._view = glm::lookAt(cameraPos, cameraPos + _front, up);
-
+	}
+	void receive(const MouseScrolEvent &mouseDown) {
+		scrollOffset += mouseDown.offset;
 	}
 
+	float scrollOffset = 0.f;
+	bool wasMousePresed = false;
+	Entity currentlyManipulatedEntity;
+	const float speed = 10.f;
+	const float sensitivity = 0.003f;
 
+	void update(entityx::EntityManager &es, entityx::EventManager &events, TimeDelta dt) override;
+
+
+
+	void manipulateObject(const glm::vec3& pos, const glm::vec3& dir, const TimeDelta& dt);
+
+
+	void rayCast(const glm::vec3& start, const glm::vec3 direction, entityx::EntityManager &es);
 
 };
+
+

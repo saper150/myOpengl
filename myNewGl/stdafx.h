@@ -27,16 +27,20 @@
 
 #include <glm\glm.hpp>
 #include <glm\gtc\matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
+#include <glm/gtc/quaternion.hpp>
 #include <rapidxml\rapidxml.hpp>
 
 #define GLEW_STATIC
 #include <GL\glew.h>
 #include <GLFW\glfw3.h>
 
+#include <entityx\entityx.h>
+
 #include "myRandom.h"
 #include "utils.h"
-#include "Shaders.h"
+#include "Input.h"
 #include "Camera.h"
+#include "Shaders.h"
 
