@@ -1,9 +1,19 @@
 #include "stdafx.h"
 #include "utils.h"
 #include <soil\SOIL.h>
+#include <fstream>
 
+bool fileExists(const std::string& name) {
+	std::ifstream f(name.c_str());
+	return f.good();
+}
 
 GLuint loadTexture(const std::string& path, int magFilter, int minFilter) {
+	if (!fileExists(path)) {
+		throw std::runtime_error("cant find texture: "+path);
+	}
+
+
 	int width, height;
 	auto deleater = [](uint8_t* image) { SOIL_free_image_data(image); };
 	std::unique_ptr<uint8_t, decltype(deleater)> image(SOIL_load_image(path.c_str(), &width, &height, 0, SOIL_LOAD_RGBA), deleater);

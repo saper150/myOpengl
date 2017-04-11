@@ -16,7 +16,8 @@ struct ProgramDescription {
 
 
 enum PROGRAMS {
-	LIGTH_PROGRAM
+	LIGTH_PROGRAM,
+	MATERIAL_PROGRAM
 
 };
 

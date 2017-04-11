@@ -11,7 +11,7 @@ aabbColider::~aabbColider()
 bool  aabbColider::testRay (
 	const glm::vec3& ray_origin,        // Ray origin, in world space
 	const glm::vec3& ray_direction,
-	const glm::mat4& model,// Ray direction (NOT target position!), in world space. Must be normalize()'d.
+	const glm::mat4& model,
 	float& intersection_distance // Output : distance between ray_origin and the intersection with the OBB
 ) const
 {

@@ -2,7 +2,7 @@
 #include "stdafx.h"
 
 class vec3;
-class TransformationWraper;
+struct TransformationWraper;
 
 
 class aabbColider

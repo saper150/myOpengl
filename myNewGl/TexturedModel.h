@@ -50,6 +50,12 @@ struct TextureModelPrototype {
 		const TextureModelPrototype* parent;
 	};
 
+	struct Bilboard :public TextureModelPrototype::Instance{
+		Bilboard(const TextureModelPrototype* parent):Instance(parent)
+		{	}
+	};
+
+	TextureModelPrototype::Bilboard createBilboard() const { return Bilboard(this); }
 	TextureModelPrototype::Instance createInstance() const { return Instance(this); }
 
 	GLsizei size = 0;
@@ -106,8 +112,6 @@ struct LigthModelPrototype {
 			glBindTexture(GL_TEXTURE_2D, parent->texture);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, parent->texture);
-			glUniform3f(parent->programDescription->uniformLocations.at("ambientLightColor"),1,1,1);
-			glUniform1f(parent->programDescription->uniformLocations.at("ambientLightStrength"),0.3);
 
 			glUniformMatrix4fv(parent->programDescription->uniformLocations.at("projection"), 1, GL_FALSE, glm::value_ptr(projection));
 			glUniformMatrix4fv(parent->programDescription->uniformLocations.at("view"), 1, GL_FALSE, glm::value_ptr(view));
@@ -128,14 +132,10 @@ struct LigthModelPrototype {
 	GLuint vertexBuffer;
 	GLuint texture;
 	const ProgramDescription * programDescription;
-	const aabbColider colider;
+	aabbColider colider;
 
 };
 
-typedef SingleTransformationWraper<TextureModelPrototype::Instance> Sprite;
-typedef SingleTransformationWraper<TextureModelPrototype::Instance> Model;
-typedef Bilboard<TextureModelPrototype::Instance> Particle;
-typedef LigthWraper<LigthModelPrototype::Instance> LigthModel;
 
 
 TextureModelPrototype createSpritePrototype(const std::string texturePath);

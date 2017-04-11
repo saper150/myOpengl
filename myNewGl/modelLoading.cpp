@@ -13,7 +13,9 @@ ModelData getModelData(std::string modelPath) {
 
 
 	std::ifstream file(modelPath, std::ifstream::in);
-	std::string str;
+	if (!file.good()) {
+		throw std::runtime_error("cant find file: "+modelPath);
+	}
 
 	auto ss = std::ostringstream{};
 
@@ -86,6 +88,14 @@ std::vector<TextureVertex> pack(const std::vector<glm::vec3>& pos, const std::ve
 	}
 	return res;
 }
+std::vector<MaterialPoint> packMaterial(const std::vector<glm::vec3>& pos, const std::vector<glm::vec3>& normal) {
+	std::vector<MaterialPoint> res(pos.size());
+	for (size_t i = 0; i < pos.size(); i++)
+	{
+		res.push_back({ pos[i],normal[i] });
+	}
+	return res;
+}
 
 TextureModelPrototype loadModel(const std::string& modelPath, const std::string& texturePath) {
 
@@ -96,6 +106,14 @@ TextureModelPrototype loadModel(const std::string& modelPath, const std::string&
 LigthModelPrototype loadModelLigth(const std::string& modelPath, const std::string& texturePath) {
 	const auto modelData = getModelData(modelPath);
 	return LigthModelPrototype(pack(modelData.pos, modelData.normals, modelData.uvs),texturePath);
+
+}
+
+MaterialModelPrototype loadAsMaterial(const std::string & modelPath, const Materials & materialEnum)
+{
+	const auto modelData = getModelData(modelPath);
+	const Material material = createMaterial(materialEnum);
+	return MaterialModelPrototype(packMaterial(modelData.pos, modelData.normals), material);
 
 }
 

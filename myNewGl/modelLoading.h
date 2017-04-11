@@ -6,7 +6,9 @@
 #include <sstream>
 #include "TexturedModel.h"
 
+#include "MaterialModel.h"
 using namespace rapidxml;
+struct MaterialPoint;
 
 template<typename T,int size>
 std::vector<T> parseArray(const char* toParse) {
@@ -30,7 +32,7 @@ std::vector<T> parseArray(const char* toParse) {
 		else {
 			 
 			buffer[bufferIndex] = 0;
-			vec[vertexIndex] = std::atof(buffer);
+			vec[vertexIndex] = static_cast<float>(std::atof(buffer));
 			vertexIndex++;
 
 			if (vertexIndex == size) {
@@ -45,7 +47,7 @@ std::vector<T> parseArray(const char* toParse) {
 		toParse++;
 	}
 	buffer[bufferIndex] = '\0';
-	vec[size - 1] = std::atof(buffer);
+	vec[size - 1] = static_cast<float>(std::atof(buffer));
 	v.emplace_back(vec);
 	return v;
 }
@@ -67,5 +69,11 @@ std::vector<T> unpack(std::vector<T> in,std::vector<int> indexes) {
 std::vector<std::vector<int>> parseIndeces(const char * toParse, int count);
 std::vector<TextureVertex> pack(const std::vector<glm::vec3>& pos, const std::vector<glm::vec2>& uv);
 
+
 TextureModelPrototype loadModel(const std::string& modelPath, const std::string& texturePath);
 LigthModelPrototype loadModelLigth(const std::string& modelPath, const std::string& texturePath);
+
+struct MaterialModelPrototype;
+
+MaterialModelPrototype loadAsMaterial(const std::string& modelPath,const Materials& material);
+

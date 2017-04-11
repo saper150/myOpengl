@@ -116,7 +116,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -157,6 +157,8 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Colider.h" />
     <ClInclude Include="Input.h" />
+    <ClInclude Include="LightSource.h" />
+    <ClInclude Include="MaterialModel.h" />
     <ClInclude Include="modelLoading.h" />
     <ClInclude Include="myRandom.h" />
     <ClInclude Include="Shaders.h" />
@@ -173,6 +175,7 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Colider.cpp" />
     <ClCompile Include="Input.cpp" />
+    <ClCompile Include="MaterialModel.cpp" />
     <ClCompile Include="modelLoading.cpp" />
     <ClCompile Include="myNewGl.cpp" />
     <ClCompile Include="myRandom.cpp" />

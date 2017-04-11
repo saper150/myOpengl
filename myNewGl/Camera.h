@@ -1,14 +1,15 @@
 #pragma once
 
 #include "stdafx.h"
+#include "Wraper.h"
 
 #define PI 3.1415926f
 
-class Transformation;
+struct Transformation;
 class aabbColider;
-struct Position {
-	glm::vec3 pos = { 0,0,0 };
-};
+
+
+
 struct CameraDirection {
 	float xAngle = 0;
 	float yAngle = 0;
@@ -21,22 +22,27 @@ struct Camera {
 	glm::mat4 view;
 };
 
+struct ProgramDescription;
+
 struct CameraSystem : public System<CameraSystem> , public Receiver<CameraSystem> {
 
-	void configure(entityx::EventManager &event_manager) {
-		event_manager.subscribe <MouseDownEvent>(*this);
-		event_manager.subscribe <MouseScrolEvent>(*this);
 
-	}
+	ComponentHandle<Camera> camera;
+	ComponentHandle<CameraDirection> direction;
+	ComponentHandle<Position> position;
+	const std::vector<ProgramDescription*> programs;
+
+	CameraSystem(Entity camera, const std::vector<ProgramDescription*>& programs);
+
+
+	void configure(entityx::EventManager &event_manager);
+
 	
-	void receive(const MouseDownEvent &mouseDown) {
-		if (mouseDown.code == GLFW_MOUSE_BUTTON_RIGHT) {
-			wasMousePresed = true;
-		}
-	}
-	void receive(const MouseScrolEvent &mouseDown) {
-		scrollOffset += mouseDown.offset;
-	}
+	void receive(const MouseDownEvent &mouseDown);
+
+	void receive(const MouseScrolEvent &mouseDown);
+
+	glm::vec3 front;
 
 	float scrollOffset = 0.f;
 	bool wasMousePresed = false;
@@ -46,13 +52,10 @@ struct CameraSystem : public System<CameraSystem> , public Receiver<CameraSystem
 
 	void update(entityx::EntityManager &es, entityx::EventManager &events, TimeDelta dt) override;
 
-
-
 	void manipulateObject(const glm::vec3& pos, const glm::vec3& dir, const TimeDelta& dt);
-
 
 	void rayCast(const glm::vec3& start, const glm::vec3 direction, entityx::EntityManager &es);
 
+	void updateLigthShader();
+
 };
-
-

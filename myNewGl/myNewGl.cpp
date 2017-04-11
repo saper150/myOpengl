@@ -14,11 +14,8 @@
 #include <glm\gtx\euler_angles.hpp>
 #include "Stearing.h"
 #include "Colider.h"
+#include "LightSource.h"
 
-
-struct position {
-	glm::vec3 pos;
-};
 
 SkyBox createSkyBox() {
 	const std::array<std::string, 6> faces = {
@@ -71,8 +68,8 @@ struct SizePoint {
 
 using namespace entityx;
 
-struct PointProgram {
-	PointProgram(GLuint program, const std::vector<SizePoint>& points) :program(program)
+struct PointPrototype {
+	PointPrototype(GLuint program, const std::vector<SizePoint>& points) :program(program)
 	{
 
 		MVPplcation = glGetUniformLocation(program, "MVP");
@@ -91,32 +88,28 @@ struct PointProgram {
 	}
 	class Instance {
 	public:
-		Instance(GLsizei size,GLuint vertexArray,GLuint MVPlocation,GLuint program):size(size)
+		Instance(PointPrototype* parent):parent(parent)
 		{
 
 		}
-		GLenum type = GL_POINTS;
+		void draw(const glm::mat4& mvp) {
+			glUseProgram(parent->program);
+			glUniformMatrix4fv(parent->MVPplcation, 1, GL_FALSE, glm::value_ptr(mvp));
+
+			glBindVertexArray(parent->vertexArray);
+			glDrawArrays(GL_TRIANGLE_FAN, 0, parent->size);
+			glBindVertexArray(0);
+		}
 
 	private:
-		GLsizei size;
-		GLuint vertexArray;
-		GLuint MVPplcation;
-		GLuint program;
-
+		PointPrototype* parent;
 	};
 
-
-	void draw(const glm::mat4& mvp) {
-		glUseProgram(program);
-		glUniformMatrix4fv(MVPplcation, 1, GL_FALSE, glm::value_ptr(mvp));
-
-		glBindVertexArray(vertexArray);
-		glDrawArrays(type, 0, size);
-		glBindVertexArray(0);
+	PointPrototype::Instance createInstance() {
+		return Instance(this);
 	}
 
 	GLsizei size = 0;
-	GLenum type = GL_POINTS;
 	GLuint vertexArray;
 	GLuint vertexBuffer;
 
@@ -124,13 +117,16 @@ struct PointProgram {
 	GLuint program;
 };
 
-typedef MultipleTransformationWraper<PointProgram> Cone;
 
-Cone createCone() {
+std::array<PointPrototype,2> createCone() {
 	glm::vec3 color1 = { 0,1,0 };
 	glm::vec3 color2 = { 1,0,0 };
 
-	std::vector<PointProgram> programs;
+
+
+	std::array<std::vector<SizePoint>,2> allPoints;
+
+
 	{
 		int i = 0;
 		std::vector<SizePoint> points;
@@ -142,8 +138,7 @@ Cone createCone() {
 			i++;
 		}
 		points.push_back({ { sin(0),cos(0),0 },{ 0,0,0 },0 });
-		programs.emplace_back(Shaders::getInstance().getProgram(Shaders::vertex::FLAT_POINT, Shaders::fragment::FLAT_COLOR), points);
-		programs.back().type = GL_TRIANGLE_FAN;
+		allPoints[0] = points;
 
 	}
 
@@ -158,32 +153,84 @@ Cone createCone() {
 			i++;
 		}
 		points.push_back({ { sin(0),cos(0),0 },{ 0,0,0 },0 });
-		programs.emplace_back(Shaders::getInstance().getProgram(Shaders::vertex::FLAT_POINT, Shaders::fragment::FLAT_COLOR), points);
-		programs.back().type = GL_TRIANGLE_FAN;
+		allPoints[1] = points;
+
 	}
 
-	return Cone(programs);
+	return{
+		PointPrototype(Shaders::getInstance().getProgram(Shaders::vertex::FLAT_POINT, Shaders::fragment::FLAT_COLOR),allPoints[0]),
+		PointPrototype(Shaders::getInstance().getProgram(Shaders::vertex::FLAT_POINT, Shaders::fragment::FLAT_COLOR),allPoints[1]),
+	};
 
 }
 
 
+
+
 GLFWwindow* Input::_window;
-
-
 struct DrawingSystem : public System<DrawingSystem> {
 
+	ComponentHandle<Camera> camera;
+	DrawingSystem(ComponentHandle<Camera> camera):camera(camera)
+	{
+
+	}
 	void update(entityx::EntityManager &es, entityx::EventManager &events, TimeDelta dt) override {
 
-		ComponentHandle<Camera> cameraHandle;
-		Entity cameraEntity = *es.entities_with_components(cameraHandle).begin();
-		ComponentHandle<Camera> camera = cameraEntity.component<Camera>();
 		es.each<Transformation, TextureModelPrototype::Instance>(
-			[dt,&camera](Entity entity, Transformation &t, TextureModelPrototype::Instance &instance){
-
+			[dt,this](Entity entity, Transformation &t, TextureModelPrototype::Instance &instance){
 			const auto mvp = camera->projection*camera->view*t.createModel();
 			instance.draw(mvp);
-
 		});
+
+		es.each<Transformation, LigthModelPrototype::Instance>(
+			[dt, this](Entity entity, Transformation &t, LigthModelPrototype::Instance &instance) {
+			instance.draw(camera->projection,camera->view,t.createModel());
+		});
+		es.each<Transformation, MaterialModelPrototype::Instance>(
+			[dt, this](Entity entity, Transformation &t, MaterialModelPrototype::Instance &instance) {
+			instance.draw(camera->projection, camera->view, t.createModel());
+		});
+
+		es.each<PointPrototype::Instance>(
+			[dt, this](Entity entity, PointPrototype::Instance &instance) {
+			const auto mvp = camera->projection*camera->view;
+			instance.draw(mvp);
+		});
+
+
+
+
+
+
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		glDepthMask(GL_FALSE);
+		es.each<Transformation, TextureModelPrototype::Bilboard>(
+			[dt, this](Entity entity, Transformation &position, TextureModelPrototype::Instance instance) {
+
+			const auto& view = camera->view;
+			glm::mat4 _model = position.createModel();
+
+			_model[0][0] = view[0][0];
+			_model[0][1] = view[1][0];
+			_model[0][2] = view[2][0];
+			_model[0][2] = view[2][0];
+			_model[1][0] = view[0][1];
+			_model[1][1] = view[1][1];
+			_model[1][2] = view[2][1];
+			_model[2][0] = view[0][2];
+			_model[2][1] = view[1][2];
+			_model[2][2] = view[2][2];
+
+
+			auto mvp = camera->projection*camera->view*_model;
+
+			instance.draw(mvp);
+		});
+		glDepthMask(GL_TRUE);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
 	};
 };
 
@@ -196,9 +243,9 @@ struct SpiralSystem : public System<SpiralSystem> {
 		es.each<Transformation,SpiralPrototype::SpiralInstance, SpiralPosition>(
 			[dt,&camera](Entity entity, Transformation &t, SpiralPrototype::SpiralInstance instance, SpiralPosition &position) {
 
-			position.spiralposition += dt*position.spiralVel;
-			if (position.spiralposition > 1.f) {
-				position.spiralposition = position.spiralposition - 1.f;
+			position.spiralposition -= static_cast<float>(dt)*position.spiralVel;
+			if (position.spiralposition < 0.f) {
+				position.spiralposition = position.spiralposition + 1.f;
 			}
 
 			const auto mvp = camera->projection*camera->view*t.createModel();
@@ -210,42 +257,172 @@ struct SpiralSystem : public System<SpiralSystem> {
 };
 
 
-
 class Scene : public EntityX {
 public:
 	Scene(GLFWwindow * window):window(window)
 	{
-		systems.add<DrawingSystem>();
-		systems.add<CameraSystem>();
-		systems.add<InputSystem>(window);
-		systems.add <SpiralSystem>();
-		systems.configure();
+
 		{
+			{
+				Entity entity = entities.create();
+				entity.assign<PointPrototype::Instance>(cone[0].createInstance());
+			}
+
+			{
+				Entity entity = entities.create();
+				entity.assign<PointPrototype::Instance>(cone[1].createInstance());
+			}
+
+		}
+
+
+		{
+			//pyramid
 			Entity entity = entities.create();
 			entity.assign<Transformation>();
+			entity.component<Transformation>()->position = { 4,4,-4 };
+
 			entity.component<Transformation>()->rotation = glm::quat({0.5,0.5,0});
 			entity.assign<TextureModelPrototype::Instance>(singlePiramidProto.createInstance());
 			entity.assign<aabbColider*>(&singlePiramidProto.colider);
 		}
-
 		{
+			//domek
 			Entity entity = entities.create();
 			entity.assign<Transformation>();
-			//entity.component<Transformation>()->rotation = { 0.5,0.5,0 };
-			entity.component<Transformation>()->position= { 3,-5,-6 };
+			entity.component<Transformation>()->position= randomVector()*8.f;
 			entity.assign<TextureModelPrototype::Instance>(domekProto.createInstance());
 			entity.assign<aabbColider*>(&domekProto.colider);
 		}
 		{
+			//neptun
 			Entity entity = entities.create();
 			entity.assign<Transformation>();
-			entity.component<Transformation>()->position = { 3,-5,-6 };
+			entity.component<Transformation>()->position = randomVector()*5.f;
+			entity.assign<TextureModelPrototype::Instance>(neptunProto.createInstance());
+			entity.assign<aabbColider*>(&neptunProto.colider);
+		}
+		{
+			//awesome face sprite
+			Entity entity = entities.create();
+			entity.assign<Transformation>();
+			entity.component<Transformation>()->position = { 3,5,6 };
+			entity.assign<TextureModelPrototype::Instance>(awesomeFaceProto.createInstance());
+			entity.assign<aabbColider*>(&awesomeFaceProto.colider);
+		}
+
+		for(int i = 0; i < 3; i++)
+		{
+			//palms
+			Entity entity = entities.create();
+			entity.assign<Transformation>();
+			entity.component<Transformation>()->position = { 3,-9,6 };
+			entity.assign<TextureModelPrototype::Instance>(palmProto.createInstance());
+			entity.assign<aabbColider*>(&palmProto.colider);
+		}
+
+		{
+			//old woman
+			Entity entity = entities.create();
+			entity.assign<Transformation>();
+			entity.component<Transformation>()->position = { 3,-9,9 };
+			entity.assign<TextureModelPrototype::Instance>(oldWoman.createInstance());
+			entity.assign<aabbColider*>(&oldWoman.colider);
+		}
+		for (size_t i = 0; i < 10; i++)
+		{
+			Entity entity = entities.create();
+			entity.assign<Transformation>();
+			entity.component<Transformation>()->position = randomVector();
+			entity.assign<Velocity>();
+			entity.assign<Stearing::Separation>();
+			entity.assign<TextureModelPrototype::Bilboard>(awesomeFaceProto.createBilboard());
+			entity.assign<aabbColider*>(&awesomeFaceProto.colider);
+		
+		}
+
+		{
+			//spiral
+			Entity entity = entities.create();
+			entity.assign<Transformation>();
+			entity.component<Transformation>()->position = randomVector()*5.f;
 			entity.assign<SpiralPrototype::SpiralInstance>(spiralProto.createInstance());
 			entity.assign<SpiralPosition>()->spiralSize;
 			entity.assign<aabbColider*>(&spiralProto.colider);
-
 			entity.component<SpiralPosition>()->spiralSize = spiralProto.totalSize;
 		}
+		{
+			//my cone
+			Entity entity = entities.create();
+			entity.assign<Transformation>();
+			entity.component<Transformation>()->position = { -4,-5,-6 };
+			entity.assign<Stearing::Flee>();
+			entity.assign<LigthModelPrototype::Instance>(myCone.createInstance());
+			entity.assign<aabbColider*>(&myCone.colider);
+		}
+		{
+			//smooth pyraimd
+			Entity entity = entities.create();
+			entity.assign<Transformation>();
+			entity.component<Transformation>()->position = { -4,-5,10 };
+
+			entity.assign<Stearing::SeekTarget>();
+			entity.assign<LigthModelPrototype::Instance>(smoothPiramidProto.createInstance());
+			entity.assign<aabbColider*>(&smoothPiramidProto.colider);
+		}
+
+		{
+			//material cone
+			Entity entity = entities.create();
+			entity.assign<Transformation>();
+			entity.component<Transformation>()->position = { 20,-5,-6 };
+			entity.assign<MaterialModelPrototype::Instance>(materialProto.createInstance());
+			entity.assign<aabbColider*>(&materialProto.colider);
+		}
+
+		{
+			//material sphere
+			Entity entity = entities.create();
+			entity.assign<Transformation>();
+			entity.component<Transformation>()->position = { 20,-5,6 };
+			entity.assign<MaterialModelPrototype::Instance>(neptunMaterialProto.createInstance());
+			entity.assign<aabbColider*>(&neptunMaterialProto.colider);
+		}
+
+		{
+			Entity entity = entities.create();
+			entity.assign<Transformation>();
+			entity.component<Transformation>()->position = { 10,3,6 };
+
+			entity.assign<Light>();
+			entity.component<Light>()->ambient = { 0.1f,0.1f,0.1f };
+			entity.component<Light>()->diffuse= { 0.8f,0.8f,0.8f };
+			entity.component<Light>()->specular= { 0.5f,0.5f,0.5f };
+			entity.component<Light>()->linear = 1.0f;
+			entity.component<Light>()->linear= 0.045f;
+			entity.component<Light>()->quadratic = 0.0075f;
+			entity.component<Transformation>()->position = { 3,-5,-6 };
+			entity.assign<MaterialModelPrototype::Instance>(neptunMaterialProto.createInstance());
+			entity.assign<aabbColider*>(&neptunMaterialProto.colider);
+		}
+		{
+			Entity entity = entities.create();
+			entity.assign<Transformation>();
+			entity.component<Transformation>()->position = { -10,3,6 };
+
+			entity.assign<Light>();
+			entity.component<Light>()->ambient = { 0.1f,0.1f,0.1f };
+			entity.component<Light>()->diffuse = { 0.8f,0.8f,0.8f };
+			entity.component<Light>()->specular = { 0.5f,0.5f,0.5f };
+			entity.component<Light>()->linear = 1.0f;
+			entity.component<Light>()->linear = 0.045f;
+			entity.component<Light>()->quadratic = 0.0075f;
+			entity.component<Transformation>()->position = { 3,5,-6 };
+			entity.assign<MaterialModelPrototype::Instance>(neptunMaterialProto.createInstance());
+			entity.assign<aabbColider*>(&neptunMaterialProto.colider);
+		}
+
+
 
 		Entity camera = entities.create();
 		camera.assign<Position>();
@@ -253,144 +430,70 @@ public:
 		camera.assign<Camera>();
 		this->camera = camera.component<Camera>();
 
-		pyramid.setTranslation(glm::translate(glm::mat4(1.f), glm::vec3(0, 0.f, -3)));
-		//pyramid2.setTranslation(glm::translate(glm::mat4(1.f), glm::vec3(0, -3.f, -3)));
 
-	//	spiral.translate = glm::translate(glm::mat4(1.f), glm::vec3(-3, -5, -3));
-		cone.setTranslation(glm::translate(glm::mat4(1.f), glm::vec3(3, 0, -3)));
+		systems.add<DrawingSystem>(camera.component<Camera>());
 
-		//domek.setTranslation(glm::translate(glm::mat4(), { 12,0,-1 }));
-		//domek.setRotation(glm::rotate(glm::mat4(), glm::radians(90.f), { 1,0,0 }));
-		//neptun.setTranslation(glm::translate(glm::mat4(), { 8,0,-3 }));
-	//	neptun.setRotation(glm::rotate(glm::mat4(),glm::radians(90.f), { 1,0,0 }));
-		//Input::mouseDownCallbacks.push_back(std::bind(&Scene::mouseDown,this));
+		const std::vector<ProgramDescription*> cameraPositionDescriptions = {
+			Shaders::getInstance().getProgram(PROGRAMS::LIGTH_PROGRAM),
+			Shaders::getInstance().getProgram(PROGRAMS::MATERIAL_PROGRAM)
+		};
+		systems.add<CameraSystem>(camera, cameraPositionDescriptions);
+
+		const std::vector<ProgramDescription*> lightDescriptions = {
+			Shaders::getInstance().getProgram(PROGRAMS::LIGTH_PROGRAM),
+			Shaders::getInstance().getProgram(PROGRAMS::MATERIAL_PROGRAM)
+		};
+		systems.add<LightSystem>(lightDescriptions);
+
+		systems.add<InputSystem>(window);
+		systems.add <SpiralSystem>();
+
+		systems.add<VelocitySystem>();
+		systems.add<StearingSystem>();
+
+		systems.configure();
 
 	}
 
-	//void mouseDown() {
-	//	if (currentlyMainpulatedObject != nullptr) {
-	//		currentlyMainpulatedObject = nullptr;
-	//		return;
-	//	}
-
-	//	float distance;
-	//	if (singlePiramidProto.colider.testRay(cameraControll.position(), cameraControll.front(), m.getModel(), distance)) {
-	//		currentlyMainpulatedObject = &m;
-	//		std::cout << distance << std::endl;
-	//	}
-	//}
-
-
-
-	TransformationWraper * currentlyMainpulatedObject = nullptr;
-
-
 	void updata(float time) {
-		//cameraControll.updataCamera(time, camera);
-	//	camera.updateAspectRation();
+
 		skyBox.draw(camera);
 		systems.update<InputSystem>(time);
 		systems.update<CameraSystem>(time);
+		systems.update<VelocitySystem>(time);
+		systems.update<StearingSystem>(time);
+		systems.update<LightSystem>(time);
 		systems.update<DrawingSystem>(time);
 		systems.update<SpiralSystem>(time);
-
-
-		//cone.draw(camera);
-		//neptun.draw(camera);
-
-		//spiral.draw(camera);
-		//spiral.update(time);
-
-		//m.draw(camera);
-
-		//pyramid.draw(camera);
-		//pyramid2.draw(camera);
-
-
-		//domek.draw(camera);
-
-		//stearing.update(time);
-		//stearing.draw(camera);
-
-
-//		if (currentlyMainpulatedObject!= nullptr) {
-//			auto& pos = cameraControll.position();
-//			auto& front = cameraControll.front();
-//			currentlyMainpulatedObject->setTranslation(glm::translate(glm::mat4(),(5.f*front)+pos));
-//			
-//			const float rotationVel = 1.8f*time;
-//#ifdef EULER
-//
-//			{
-//				static auto rotation = glm::vec3(0, 0, 0);
-//				if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-//					rotation.x += rotationVel;
-//				}
-//				if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-//					rotation.x -= rotationVel;
-//
-//				}
-//				if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-//					rotation.y += rotationVel;
-//
-//				}
-//				if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-//					rotation.y -= rotationVel;
-//				}
-//				currentlyMainpulatedObject->setRotation(glm::eulerAngleXYZ(rotation.x, rotation.y, 0.f));
-//
-//			}
-//#else
-//			{
-//				auto& rotation = glm::quat_cast(currentlyMainpulatedObject->getRotation());
-//				if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-//					rotation *= glm::quat(cos(rotationVel / 2.f), sin(rotationVel / 2.f), 0, 0);
-//				}
-//				if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-//					rotation *= glm::quat(cos(-rotationVel / 2.f), sin(-rotationVel / 2.f), 0, 0);
-//				}
-//				if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-//					rotation *= glm::quat(cos(-rotationVel / 2.f), 0, sin(-rotationVel / 2.f), 0);
-//				}
-//				if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-//					rotation *= glm::quat(cos(rotationVel / 2.f), 0, sin(rotationVel / 2.f), 0);
-//				}
-//				rotation = glm::normalize(rotation);
-//
-//				currentlyMainpulatedObject->setRotation(glm::mat4_cast(rotation));
-//			}
-//#endif
-//
-//		}
-//
-//
-
-
-
-	//	pyramid2.draw(camera);
 
 	}
 private:
 
-	TextureModelPrototype awesomeFaceProto= createSpritePrototype("awesomeface.png");
-	Sprite sprite = awesomeFaceProto.createInstance();
+	TextureModelPrototype awesomeFaceProto= createSpritePrototype("textures/awesomeface.png");
+	TextureModelPrototype palmProto = createSpritePrototype("textures/palm.png");
+	TextureModelPrototype oldWoman = createSpritePrototype("textures/old_woman.jpg");
 
-	TextureModelPrototype singlePiramidProto = loadModel("pyramid.dae", "pyramid.png");
-	TextureModelPrototype domekProto = loadModel("domek.dae", "domek.jpg");
 
-	Model pyramid = singlePiramidProto.createInstance();
-	Stearing stearing{ &pyramid.getModel() };
-	//Model pyramid = loadModel("pyramid.dae", "pyramid.png");
-	TextureModelPrototype pyramid2Proto = loadModel("pir.dae","pir.png");
-	TextureModelPrototype neptunProto = loadModel("neptun.dae", "neptun.jpg");
+
+	TextureModelPrototype singlePiramidProto = loadModel("models/pyramid.dae", "textures/pyramid.png");
+
+	TextureModelPrototype domekProto = loadModel("models/domek.dae", "textures/domek.jpg");
+
+	TextureModelPrototype pyramid2Proto = loadModel("models/pir.dae","textures/pir.png");
+	TextureModelPrototype neptunProto = loadModel("models/neptun.dae", "textures/neptun.jpg");
+	MaterialModelPrototype neptunMaterialProto = loadAsMaterial("models/neptun.dae", Materials::PEARL);
+
+	std::array<PointPrototype, 2> cone = createCone();
 
 	SpiralPrototype spiralProto = createSpiral();
-	
 
-	LigthModelPrototype lProto = loadModelLigth("pir.dae", "pir.png");
+	LigthModelPrototype myCone = loadModelLigth("models/pir.dae", "textures/pir.png");
+	LigthModelPrototype smoothPiramidProto = loadModelLigth("models/pyramidSmooth.dae", "textures/pyramid.png");
+
+	MaterialModelPrototype materialProto = loadAsMaterial("models/pir.dae", Materials::PEARL);
 
 	SkyBox skyBox = createSkyBox();
-	Cone cone = createCone();
+	//Cone cone = createCone();
 
 	ComponentHandle<Camera> camera;
 
@@ -409,15 +512,25 @@ public:
 		while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
 			glfwWindowShouldClose(window) == 0)
 		{
+			static int frameCount = 0;
+
+			static std::chrono::duration<float> timeToSecond;
+
 			static auto prevTime = std::chrono::high_resolution_clock::now();
 			auto now = std::chrono::high_resolution_clock::now();
-			float time = static_cast<std::chrono::duration<float>> (now - prevTime).count();
+			const auto frameDuration = static_cast<std::chrono::duration<float>> (now - prevTime);
 			prevTime = std::chrono::high_resolution_clock::now();
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			scene.updata(frameDuration.count());
 
-			scene.updata(time);
-
+			timeToSecond += frameDuration;
+			if (timeToSecond > std::chrono::seconds(1)) {
+				timeToSecond -= std::chrono::seconds(1);
+				std::cout << "fps: " << frameCount << "\n";
+				frameCount = 0;
+			}
+			frameCount++;
 
 			glfwSwapBuffers(window);
 			glfwPollEvents();
@@ -463,9 +576,17 @@ int main()
 
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
-	Input::init(window);
-	Renderer r(window);
-	r.loop();
+	try {
+
+		Input::init(window);
+		Renderer r(window);
+		r.loop();
+	}
+	catch (std::exception e) {
+		std::cout << e.what() << std::endl;
+		int i;
+		std::cin>>i;
+	}
 
     return 0;
 }
