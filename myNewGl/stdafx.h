@@ -24,6 +24,8 @@
 #include <memory>
 #include <array>
 #include <functional>
+#include <bitset>
+
 
 #include <glm\glm.hpp>
 #include <glm\gtc\matrix_transform.hpp>
@@ -38,8 +40,11 @@
 
 #include <entityx\entityx.h>
 
+#include <btBulletDynamicsCommon.h>
+
 #include "myRandom.h"
 #include "utils.h"
+#include "Physics.h"
 #include "Input.h"
 #include "Camera.h"
 #include "Shaders.h"

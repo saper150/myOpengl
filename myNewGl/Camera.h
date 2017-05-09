@@ -32,9 +32,9 @@ struct CameraSystem : public System<CameraSystem> , public Receiver<CameraSystem
 	ComponentHandle<Position> position;
 	const std::vector<ProgramDescription*> programs;
 
-	CameraSystem(Entity camera, const std::vector<ProgramDescription*>& programs);
-
-
+	CameraSystem(Entity camera, const std::vector<ProgramDescription*>& programs,  btDynamicsWorld* world, EntityX* ex);
+	btDynamicsWorld* world;
+	EntityX* ex;
 	void configure(entityx::EventManager &event_manager);
 
 	
@@ -57,5 +57,9 @@ struct CameraSystem : public System<CameraSystem> , public Receiver<CameraSystem
 	void rayCast(const glm::vec3& start, const glm::vec3 direction, entityx::EntityManager &es);
 
 	void updateLigthShader();
+
+private:
+	void setManipulationObject(Entity& e);
+	void releaseManipulationObject();
 
 };

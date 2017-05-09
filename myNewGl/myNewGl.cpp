@@ -198,9 +198,33 @@ struct DrawingSystem : public System<DrawingSystem> {
 			instance.draw(mvp);
 		});
 
+		es.each<MaterialModelPrototype::Instance,std::shared_ptr<btRigidBody>>(
+			[dt, this](Entity entity, MaterialModelPrototype::Instance &instance, std::shared_ptr<btRigidBody>& body ) {
 
+			btTransform& trans = body->getWorldTransform();
+			glm::mat4 model;
+			trans.getOpenGLMatrix(glm::value_ptr(model));
+			instance.draw(camera->projection, camera->view,model);
+		});
 
+		es.each<TextureModelPrototype::Instance, std::shared_ptr<btRigidBody>>(
+			[dt, this](Entity entity, TextureModelPrototype::Instance &instance, std::shared_ptr<btRigidBody>& body) {
 
+			btTransform& trans = body->getWorldTransform();
+			glm::mat4 model;
+			trans.getOpenGLMatrix(glm::value_ptr(model));
+			instance.draw(camera->projection* camera->view* model);
+		});
+
+		es.each<std::shared_ptr<btRigidBody>, LigthModelPrototype::Instance>(
+			[dt, this](Entity entity, std::shared_ptr<btRigidBody> &body, LigthModelPrototype::Instance &instance) {
+
+			btTransform& trans = body->getWorldTransform();
+			glm::mat4 model;
+			trans.getOpenGLMatrix(glm::value_ptr(model));
+			instance.draw(camera->projection, camera->view, model);
+
+		});
 
 
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -257,7 +281,7 @@ struct SpiralSystem : public System<SpiralSystem> {
 };
 
 
-class Scene : public EntityX {
+class Scene {
 public:
 	Scene(GLFWwindow * window):window(window)
 	{
@@ -306,7 +330,11 @@ public:
 			//awesome face sprite
 			Entity entity = entities.create();
 			entity.assign<Transformation>();
-			entity.component<Transformation>()->position = { 3,5,6 };
+			entity.component<Transformation>()->position = { 0,0,0 };
+			entity.component<Transformation>()->scale = 100.f;
+
+			entity.component<Transformation>()->rotation = glm::quat(glm::eulerAngleX(glm::radians(90.f)));
+
 			entity.assign<TextureModelPrototype::Instance>(awesomeFaceProto.createInstance());
 			entity.assign<aabbColider*>(&awesomeFaceProto.colider);
 		}
@@ -422,6 +450,75 @@ public:
 			entity.assign<aabbColider*>(&neptunMaterialProto.colider);
 		}
 
+		{
+			Entity entity = entities.create();
+
+			btStaticPlaneShape* groundShape = new btStaticPlaneShape(btVector3(0, 1, 0), 1);
+			btDefaultMotionState groundMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, -1, 0)));
+			btRigidBody::btRigidBodyConstructionInfo
+				groundRigidBodyCI(0, &groundMotionState, groundShape, btVector3(0, 0, 0));
+			
+
+			std::shared_ptr<btRigidBody> body(new btRigidBody(groundRigidBodyCI), rigidBodyDeleater(physics.dynamicsWorld.get()));
+			entity.assign<std::shared_ptr<btRigidBody>>(body);
+			body->setUserPointer(nullptr);
+			physics.dynamicsWorld->addRigidBody(body.get());
+
+		}
+
+		{
+			Entity entity = entities.create();
+
+			btSphereShape* fallShape = new btSphereShape(1);
+
+			btDefaultMotionState* fallMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 50, 0)));
+			btScalar mass = 1;
+			btVector3 fallInertia(100.f, 100.f, 100.f);
+			fallShape->calculateLocalInertia(mass, fallInertia);
+			btRigidBody::btRigidBodyConstructionInfo fallRigidBodyCI(mass, fallMotionState, fallShape, fallInertia);
+
+			std::shared_ptr<btRigidBody> body(new btRigidBody(fallRigidBodyCI), rigidBodyDeleater(physics.dynamicsWorld.get()));
+			entity.assign<std::shared_ptr<btRigidBody>>(body);
+			entity.assign<LigthModelPrototype::Instance>(neptunLightproto.createInstance());
+
+			std::cout << entity.id().id() << std::endl;
+			std::bitset<64> x(entity.id().id());
+			std::cout << x << std::endl;
+
+			const auto a = static_cast<unsigned int>(entity.id().id());
+
+			body->setUserPointer(reinterpret_cast<void*>(a));
+
+			physics.dynamicsWorld->addRigidBody(body.get());
+
+		}
+		{
+			Entity entity = entities.create();
+
+			btSphereShape* fallShape = new btSphereShape(1);
+
+			btDefaultMotionState* fallMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 50, 0)));
+			btScalar mass = 1;
+			btVector3 fallInertia(100.f, 100.f, 100.f);
+			fallShape->calculateLocalInertia(mass, fallInertia);
+			btRigidBody::btRigidBodyConstructionInfo fallRigidBodyCI(mass, fallMotionState, fallShape, fallInertia);
+
+			std::shared_ptr<btRigidBody> body(new btRigidBody(fallRigidBodyCI), rigidBodyDeleater(physics.dynamicsWorld.get()));
+			entity.assign<std::shared_ptr<btRigidBody>>(body);
+			entity.assign<MaterialModelPrototype::Instance>(neptunMaterialProto.createInstance());
+
+			std::cout << entity.id().id() << std::endl;
+			std::bitset<64> x(entity.id().id());
+			std::cout << x << std::endl;
+
+			const auto a = static_cast<unsigned int>(entity.id().id());
+
+			body->setUserPointer(reinterpret_cast<void*>(a));
+
+			physics.dynamicsWorld->addRigidBody(body.get());
+
+		}
+		btBoxShape* s = new btBoxShape({ 1,1,1 });
 
 
 		Entity camera = entities.create();
@@ -437,7 +534,7 @@ public:
 			Shaders::getInstance().getProgram(PROGRAMS::LIGTH_PROGRAM),
 			Shaders::getInstance().getProgram(PROGRAMS::MATERIAL_PROGRAM)
 		};
-		systems.add<CameraSystem>(camera, cameraPositionDescriptions);
+		systems.add<CameraSystem>(camera, cameraPositionDescriptions,physics.dynamicsWorld.get(),&ex);
 
 		const std::vector<ProgramDescription*> lightDescriptions = {
 			Shaders::getInstance().getProgram(PROGRAMS::LIGTH_PROGRAM),
@@ -457,6 +554,7 @@ public:
 
 	void updata(float time) {
 
+		physics.symulate(time);
 		skyBox.draw(camera);
 		systems.update<InputSystem>(time);
 		systems.update<CameraSystem>(time);
@@ -465,9 +563,15 @@ public:
 		systems.update<LightSystem>(time);
 		systems.update<DrawingSystem>(time);
 		systems.update<SpiralSystem>(time);
-
 	}
 private:
+	Physics physics;
+
+	EntityX ex;
+
+	EntityManager& entities = ex.entities;
+	SystemManager& systems = ex.systems;
+	EventManager& events = ex.events;
 
 	TextureModelPrototype awesomeFaceProto= createSpritePrototype("textures/awesomeface.png");
 	TextureModelPrototype palmProto = createSpritePrototype("textures/palm.png");
@@ -486,6 +590,8 @@ private:
 	std::array<PointPrototype, 2> cone = createCone();
 
 	SpiralPrototype spiralProto = createSpiral();
+
+	LigthModelPrototype neptunLightproto = loadModelLigth("models/neptun.dae", "textures/neptun.jpg");
 
 	LigthModelPrototype myCone = loadModelLigth("models/pir.dae", "textures/pir.png");
 	LigthModelPrototype smoothPiramidProto = loadModelLigth("models/pyramidSmooth.dae", "textures/pyramid.png");
@@ -575,6 +681,7 @@ int main()
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+
 
 	try {
 

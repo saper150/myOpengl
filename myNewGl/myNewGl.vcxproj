@@ -89,13 +89,14 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>lib\glew\include;lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>lib\glew\include;lib;lib/bullet/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>lib\entityx\lib;lib\glew\lib;lib\soil;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glew32s.lib;opengl32.lib;SOIL.lib;entityx-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>lib\entityx\lib;lib\glew\lib;lib\soil;lib\bullet\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glew32s.lib;opengl32.lib;SOIL.lib;entityx-d.lib;BulletCollision_Debug.lib;BulletDynamics_Debug.lib;LinearMath_Debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -156,11 +157,13 @@
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Colider.h" />
+    <ClInclude Include="Cube.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="LightSource.h" />
     <ClInclude Include="MaterialModel.h" />
     <ClInclude Include="modelLoading.h" />
     <ClInclude Include="myRandom.h" />
+    <ClInclude Include="Physics.h" />
     <ClInclude Include="Shaders.h" />
     <ClInclude Include="SkyBox.h" />
     <ClInclude Include="Spiral.h" />
@@ -179,6 +182,7 @@
     <ClCompile Include="modelLoading.cpp" />
     <ClCompile Include="myNewGl.cpp" />
     <ClCompile Include="myRandom.cpp" />
+    <ClCompile Include="Physics.cpp" />
     <ClCompile Include="Shaders.cpp" />
     <ClCompile Include="SkyBox.cpp" />
     <ClCompile Include="stdafx.cpp">
